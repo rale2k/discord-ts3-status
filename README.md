@@ -1,10 +1,15 @@
 # Discord TeamSpeak 3 Status Bot
 
-Discord bot to monitor and display the status of a TeamSpeak 3 server in a Discord channel. 
+Discord bot to monitor and display the status of a TeamSpeak 3 server in a Discord channel using serverquery. 
 
 Built for single server use.
 
 ## Setup
+### Docker (recommended)
+Just deploy a docker image with the required config variables set.
+[Docker Hub](https://hub.docker.com/r/rale2k/discord-ts3-status)
+[Example compose file](./docker-compose.yml)
+
 ### Locally 
 1. **Install dependencies:**
    ```bash
@@ -17,7 +22,7 @@ Built for single server use.
    ```
 
 3. **Configure the bot:**
-   Populate the following variables mentioned in [the config](#my-multi-word-header)
+   Populate the following variables mentioned in [the config](#configuration)
 
 4. **Run the bot:**
    ```bash
@@ -38,3 +43,5 @@ Built for single server use.
 - `TS3_NICKNAME`: Bot nickname on TS3 (default: Discord-Bot)
 - `TS3_VIRTUAL_SERVER_ID`: Virtual server ID (default: 1)
 - `UPDATE_INTERVAL`: Update interval in seconds (default: 30)
+- `MAX_ACTIVE_SECONDS`: Seconds before user shows as away (default: 60)
+- `MAX_AWAY_SECONDS`: Seconds before user shows as idle (default: 300)

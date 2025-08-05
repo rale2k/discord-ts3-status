@@ -9,11 +9,6 @@ COPY . .
 RUN useradd -m -u 1000 botuser && chown -R botuser:botuser /app
 USER botuser
 
-ENV DISCORD_TOKEN=""
-ENV DISCORD_CHANNEL_ID="0"
-ENV TS3_HOST=""
-ENV TS3_PASSWORD=""
-
 ENV TS3_QUERY_PORT="10011"
 ENV TS3_SERVER_PORT="9987"
 ENV TS3_USERNAME="serveradmin"
