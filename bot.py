@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional, Union
 
 import discord
 from discord.ext import tasks
@@ -13,7 +13,7 @@ class TS3Bot:
         self.config = config
         self.bot = discord.Client(intents=discord.Intents.default())
         self.ts3_conn: Optional[TS3Connection] = None
-        self.message_id: Optional[int] = None
+        self.message_ids: dict = {}
 
         self.setup_events()
 
@@ -121,9 +121,9 @@ class TS3Bot:
                         seconds = idle_seconds % 60
                         idle_str = f"{minutes}m {seconds}s"
 
-                    if idle_seconds < Config.max_active_seconds:
+                    if idle_seconds < self.config.max_active_seconds:
                         status_icon = "🟢"
-                    elif idle_seconds < Config.max_away_seconds:
+                    elif idle_seconds < self.config.max_away_seconds:
                         status_icon = "🟡"
                     else:
                         status_icon = "🔴"
@@ -140,35 +140,43 @@ class TS3Bot:
         embed.timestamp = status.get('last_updated', datetime.now())
         return embed
 
+    async def get_channels(self) -> List[Optional[discord.TextChannel]]:
+        channels = []
+        for id in self.config.discord_channel_ids:
+            channel = self.bot.get_channel(id)
+            if not channel:
+                logger.error(
+                    f"Discord channel with {id} not found")
+                self.message_ids.pop(f"{id}")
+            channels.append(channel)
+        return channels
+
     @tasks.loop(seconds=30)
     async def update_status(self):
         try:
-            channel = self.bot.get_channel(self.config.discord_channel_id)
-            if not channel:
-                logger.error(
-                    f"Discord channel with ${self.config.discord_channel_id} not found")
-                return
-
+            channels = await self.get_channels()
             status = self.get_server_status()
 
             if "error" in status and not self.ts3_conn:
                 logger.info("Reconnecting to TS server...")
-                await self.connect_ts3()
+                self.connect_ts3()
                 status = self.get_server_status()
 
             embed = self.format_status_message(status)
-
-            if self.message_id:
-                try:
-                    message = await channel.fetch_message(self.message_id)
-                    await message.edit(embed=embed)
-                except (discord.NotFound, discord.HTTPException):
+            for channel in channels:
+                message_id = self.message_ids.get(f"{channel.id}")
+                if message_id is not None:
+                    try:
+                        message = await channel.fetch_message(int(message_id))
+                        await message.edit(embed=embed)
+                    except (discord.NotFound, discord.HTTPException):
+                        message = await channel.send(embed=embed)
+                        self.message_ids.update(
+                            {f"{channel.id}": f"{message.id}"})
+                else:
+                    await channel.purge()
                     message = await channel.send(embed=embed)
-                    self.message_id = message.id
-            else:
-                await channel.purge()
-                message = await channel.send(embed=embed)
-                self.message_id = message.id
+                    self.message_ids.update({f"{channel.id}": f"{message.id}"})
 
         except Exception as e:
             logger.error(f"Error updating status: {e}")

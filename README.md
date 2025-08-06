@@ -32,15 +32,15 @@ Just deploy a docker image with the required config variables set.
 ## Configuration
 ### Required
 - `DISCORD_TOKEN`: Discord bot token
-- `DISCORD_CHANNEL_ID`: Discord channel ID (enable Developer Mode in Discord to copy channel ID)
-- `TS3_HOST`: TeamSpeak 3 server address
-- `TS3_PASSWORD`: ServerQuery password
+- `DISCORD_CHANNEL_IDS`: CSV list of Discord channel IDs
+- `TS3_HOST`: TS3 server address
+- `TS3_PASSWORD`: TS3 ServerQuery password
 
 ### Optional
-- `TS3_QUERY_PORT`: ServerQuery port (default: 10011)
-- `TS3_SERVER_PORT`: TeamSpeak server port (default: 9987)
-- `TS3_USERNAME`: ServerQuery username (default: serveradmin)
-- `TS3_NICKNAME`: Bot nickname on TS3 (default: Discord-Bot)
+- `TS3_QUERY_PORT`: TS3 ServerQuery port (default: 10011)
+- `TS3_SERVER_PORT`: TS3 server port (default: 9987)
+- `TS3_USERNAME`: TS3 ServerQuery username (default: serveradmin)
+- `TS3_NICKNAME`: Bot nickname on TS (default: Discord-Bot)
 - `TS3_VIRTUAL_SERVER_ID`: Virtual server ID (default: 1)
 - `UPDATE_INTERVAL`: Update interval in seconds (default: 30)
 - `MAX_ACTIVE_SECONDS`: Seconds before user shows as away (default: 60)
