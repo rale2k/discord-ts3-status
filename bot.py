@@ -145,9 +145,10 @@ class TS3Bot:
         for id in self.config.discord_channel_ids:
             channel = self.bot.get_channel(id)
             if not channel:
-                logger.error(
-                    f"Discord channel with {id} not found")
-                self.message_ids.pop(f"{id}")
+                logger.warning(
+                    f"Discord channel with id {id} not found")
+                self.message_ids.pop(f"{id}", None)
+                continue
             channels.append(channel)
         return channels
 
