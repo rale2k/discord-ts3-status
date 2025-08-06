@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-services:
   ts3-discord-status:
     build: .
     container_name: ts3-discord-status
