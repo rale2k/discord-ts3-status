@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Config:
     discord_token: str
-    discord_channel_id: int
+    discord_channel_ids: list
     ts3_host: str
     ts3_query_port: int = 10011
     ts3_server_port: int = 9987
@@ -26,7 +26,9 @@ class Config:
     def from_env(cls) -> 'Config':
         return cls(
             discord_token=os.getenv('DISCORD_TOKEN', ''),
-            discord_channel_id=int(os.getenv('DISCORD_CHANNEL_ID', '0')),
+            discord_channel_ids=[
+                int(id) for id in os.getenv('DISCORD_CHANNEL_IDS', '0').split(',')
+            ],
             ts3_host=os.getenv('TS3_HOST', ''),
             ts3_query_port=int(os.getenv('TS3_QUERY_PORT', '10011')),
             ts3_server_port=int(os.getenv('TS3_SERVER_PORT', '9987')),

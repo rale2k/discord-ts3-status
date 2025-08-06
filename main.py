@@ -6,12 +6,12 @@ from config import Config, logger
 
 async def main():
     config = Config.from_env()
-    logger.info(f"{config.discord_token}")
+
     if not config.discord_token:
         logger.error("DISCORD_TOKEN not set")
         return
 
-    if not config.discord_channel_id:
+    if not config.discord_channel_ids:
         logger.error("DISCORD_CHANNEL_ID not set")
         return
 

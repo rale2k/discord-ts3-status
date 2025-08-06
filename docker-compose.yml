@@ -10,7 +10,7 @@ services:
     environment:
       # Required
       - DISCORD_TOKEN=${DISCORD_TOKEN}
-      - DISCORD_CHANNEL_ID=${DISCORD_CHANNEL_ID}
+      - DISCORD_CHANNEL_IDS=${DISCORD_CHANNEL_IDS}
       - TS3_HOST=${TS3_HOST}
       - TS3_PASSWORD=${TS3_PASSWORD}
       
