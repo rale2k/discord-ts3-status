@@ -89,7 +89,7 @@ class TS3Bot:
             embed.add_field(name="Error", value=status["error"], inline=False)
         else:
             embed = discord.Embed(
-                title=f"<:TeamSpeak:1402388799396384859> {status['server_name']}",
+                title=f"🎤 {status['server_name']}",
                 color=discord.Color.green()
             )
 
@@ -170,7 +170,7 @@ class TS3Bot:
                     try:
                         message = await channel.fetch_message(int(message_id))
                         await message.edit(embed=embed)
-                    except (discord.NotFound, discord.HTTPException):
+                    except (discord.NotFound):
                         message = await channel.send(embed=embed)
                         self.message_ids.update(
                             {f"{channel.id}": f"{message.id}"})
