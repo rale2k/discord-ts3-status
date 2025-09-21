@@ -1,7 +1,11 @@
 import asyncio
+import logging
 
-from bot import TS3Bot
-from config import Config, logger
+from bot import TSBot
+from config import Config
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 async def main():
@@ -19,7 +23,7 @@ async def main():
         logger.error("TS3_HOST not set")
         return
 
-    bot = TS3Bot(config)
+    bot = TSBot(config)
 
     try:
         await bot.run()

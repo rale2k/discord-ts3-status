@@ -1,18 +1,23 @@
 from datetime import datetime
-from typing import List, Optional, Union
+import logging
+from typing import List, Optional
 
 import discord
 from discord.ext import tasks
 from ts3API.TS3Connection import TS3Connection
+from ts3API.utilities import TS3ConnectionClosedException
+from config import Config
 
-from config import Config, logger
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
-class TS3Bot:
+class TSBot:
     def __init__(self, config: Config):
         self.config = config
         self.bot = discord.Client(intents=discord.Intents.default())
-        self.ts3_conn: Optional[TS3Connection] = None
+        self.ts_connection: Optional[TS3Connection] = None
         self.message_ids: dict = {}
 
         self.setup_events()
@@ -24,66 +29,67 @@ class TS3Bot:
             self.connect_ts3()
             self.update_status.start()
 
+            self.update_status.change_interval(
+                seconds=self.config.update_interval)
+
     def connect_ts3(self):
         try:
-            if self.ts3_conn:
+            if self.ts_connection:
                 try:
-                    self.ts3_conn.quit()
+                    self.ts_connection.quit()
                 except:
                     pass
 
-            self.ts3_conn = TS3Connection(
-                self.config.ts3_host, self.config.ts3_query_port)
-            self.ts3_conn.login(self.config.ts3_username,
+            query_port = self.config.ts3_query_port_ssh if self.config.use_ssh else self.config.ts3_query_port_telnet
+
+            self.ts_connection = TS3Connection(
+                host=self.config.ts3_host,
+                port=query_port,
+                use_ssh=self.config.use_ssh,
+                username=self.config.ts3_username,
+                password=self.config.ts3_password,
+                accept_all_keys=True  # not safe, but w/e for this simple lil' bot
+            )
+
+            self.ts_connection.login(self.config.ts3_username,
                                 self.config.ts3_password)
-            self.ts3_conn.use(self.config.ts3_virtual_server_id)
-            logger.info("Connected to TeamSpeak 3 server")
+
+            self.ts_connection.use(self.config.ts3_virtual_server_id)
+            logger.info("Connected to TeamSpeak server")
         except Exception as e:
-            logger.error(f"Failed to connect to TeamSpeak 3: {e}")
-            self.ts3_conn = None
+            logger.error(f"Failed to connect to TeamSpeak server: {e}")
+            self.ts_connection = None
 
     def get_server_status(self) -> dict:
-        if not self.ts3_conn:
-            return {"error": "Not connected to TeamSpeak server"}
+        assert self.ts_connection is not None, "No server connection."
 
-        try:
-            server_info = self.ts3_conn.serverinfo()
-            client_list = self.ts3_conn.clientlist()
+        server_info = self.ts_connection.serverinfo()
+        client_list = self.ts_connection.clientlist()
 
-            online_clients = []
-            for client in client_list:
-                if client.get('client_type') == '0':
-                    client_info = self.get_client_status(client.get("clid"))
-                    if "error" not in client_info:
-                        online_clients.append(client_info)
+        online_clients = []
+        for client in client_list:
+            if client.get('client_type') == '0':
+                client_info = self.get_client_status(client.get("clid"))
+                if "error" not in client_info:
+                    online_clients.append(client_info)
 
-            return {
-                "server_name": server_info.get('virtualserver_name', 'Unknown'),
-                "online_users": len(online_clients),
-                "max_clients": int(server_info.get('virtualserver_maxclients', 0)),
-                "uptime": int(server_info.get('virtualserver_uptime', 0)),
-                "clients": online_clients,
-                "last_updated": datetime.now()
-            }
-        except Exception as e:
-            logger.error(f"Error getting server status: {e}")
-            return {"error": str(e)}
+        return {
+            "server_name": server_info.get('virtualserver_name', 'Unknown'),
+            "online_users": len(online_clients),
+            "max_clients": int(server_info.get('virtualserver_maxclients', 0)),
+            "uptime": int(server_info.get('virtualserver_uptime', 0)),
+            "clients": online_clients,
+            "last_updated": datetime.now()
+        }
 
     def get_client_status(self, client_id) -> dict:
-        if not self.ts3_conn:
-            return {"error": "Not connected to TeamSpeak server"}
-        try:
-            return self.ts3_conn.clientinfo(client_id)
-        except Exception as e:
-            logger.error(
-                f"Error getting client info for client with id: {client_id}")
-            return {"error": str(e)}
+        return self.ts_connection.clientinfo(client_id)
 
     def format_status_message(self, status: dict) -> discord.Embed:
         if "error" in status:
             embed = discord.Embed(
-                title="TeamSpeak Server Status",
-                description="**Server Offline or unreachable**",
+                title="⚠️ TeamSpeak Server Unavailable",
+                description=f"{self.config.ts3_host}:{self.config.ts3_server_port}",
                 color=discord.Color.red()
             )
             embed.add_field(name="Error", value=status["error"], inline=False)
@@ -156,12 +162,15 @@ class TS3Bot:
     async def update_status(self):
         try:
             channels = await self.get_channels()
-            status = self.get_server_status()
 
-            if "error" in status and not self.ts3_conn:
-                logger.info("Reconnecting to TS server...")
-                self.connect_ts3()
+            try:
                 status = self.get_server_status()
+            except (TS3ConnectionClosedException, Exception) as e:
+                error_msg = "Teamspeak connection closed" if isinstance(
+                    e, TS3ConnectionClosedException) else str(e)
+                logger.error(f"{error_msg}. Reconnecting...")
+                status = {"error": "No connection to server!"}
+                self.connect_ts3()
 
             embed = self.format_status_message(status)
             for channel in channels:
@@ -190,6 +199,6 @@ class TS3Bot:
         await self.bot.start(self.config.discord_token)
 
     async def close(self):
-        if self.ts3_conn:
-            self.ts3_conn.quit()
+        if self.ts_connection:
+            self.ts_connection.quit()
         await self.bot.close()
