@@ -34,7 +34,7 @@ class Config:
             ts3_nickname=os.getenv('TS3_NICKNAME', 'Discord-Bot'),
             ts3_virtual_server_id=int(os.getenv('TS3_VIRTUAL_SERVER_ID', '1')),
             update_interval=int(os.getenv('UPDATE_INTERVAL', '30')),
-            use_ssh=bool(os.getenv('USE_SSH', 'True')),
+            use_ssh=os.getenv('USE_SSH', 'True').lower() in ('true'),
             max_active_seconds=int(os.getenv('MAX_ACTIVE_SECONDS', '60')),
             max_away_seconds=int(os.getenv('MAX_AWAY_SECONDS', '300'))
         )
