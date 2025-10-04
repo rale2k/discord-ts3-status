@@ -1,24 +1,27 @@
 from datetime import datetime
+import base64
 import logging
 from typing import List, Optional
 
 import discord
 from discord.ext import tasks
-from ts3API.TS3Connection import TS3Connection
+import requests
 from ts3API.utilities import TS3ConnectionClosedException
 from config import Config
+from domain import ServerInfo
+from image import generate_status_image
+from teamspeak import Teamspeak
 
-
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class TSBot:
+class Bot:
     def __init__(self, config: Config):
         self.config = config
-        self.bot = discord.Client(intents=discord.Intents.default())
-        self.ts_connection: Optional[TS3Connection] = None
         self.message_ids: dict = {}
+
+        self.bot = discord.Client(intents=discord.Intents.default())
+        self.teamspeak: Teamspeak = Teamspeak(config)
 
         self.setup_events()
 
@@ -26,116 +29,78 @@ class TSBot:
         @self.bot.event
         async def on_ready():
             logger.info(f'Bot logged in as {self.bot.user}')
-            self.connect_ts3()
+            self.teamspeak.connect()
             self.update_status.start()
 
             self.update_status.change_interval(
                 seconds=self.config.update_interval)
 
-    def connect_ts3(self):
+    def create_embed(self, server_info: ServerInfo) -> discord.Embed:
+        if self.config.imgbb_api_key:
+            return self.create_image_embed(server_info)
+        else:
+            return self.create_textual_embed(server_info)
+
+    def create_image_embed(self, server_info: ServerInfo) -> discord.Embed:
         try:
-            if self.ts_connection:
-                try:
-                    self.ts_connection.quit()
-                except:
-                    pass
+            img_buffer = generate_status_image(server_info)
+            img_base64 = base64.b64encode(img_buffer.read()).decode('utf-8')
 
-            query_port = self.config.ts3_query_port_ssh if self.config.use_ssh else self.config.ts3_query_port_telnet
-
-            self.ts_connection = TS3Connection(
-                host=self.config.ts3_host,
-                port=query_port,
-                use_ssh=self.config.use_ssh,
-                username=self.config.ts3_username,
-                password=self.config.ts3_password,
-                accept_all_keys=True  # not safe, but w/e for this simple lil' bot
+            response = requests.post(
+                f'https://api.imgbb.com/1/upload?expiration=21600&key={self.config.imgbb_api_key}',
+                data={'image': img_base64},
+                timeout=10
             )
 
-            self.ts_connection.login(self.config.ts3_username,
-                                self.config.ts3_password)
+            embed = discord.Embed()
+            embed.set_image(url=response.json().get("data", {}).get("url"))
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to upload image to imgbb: {e}")
+            return self.create_textual_embed(server_info)
+        finally:
+            img_buffer.close()
 
-            self.ts_connection.use(self.config.ts3_virtual_server_id)
-            logger.info("Connected to TeamSpeak server")
-        except Exception as e:
-            logger.error(f"Failed to connect to TeamSpeak server: {e}")
-            self.ts_connection = None
+        return embed
 
-    def get_server_status(self) -> dict:
-        assert self.ts_connection is not None, "No server connection."
-
-        server_info = self.ts_connection.serverinfo()
-        client_list = self.ts_connection.clientlist()
-
-        online_clients = []
-        for client in client_list:
-            if client.get('client_type') == '0':
-                client_info = self.get_client_status(client.get("clid"))
-                if "error" not in client_info:
-                    online_clients.append(client_info)
-
-        return {
-            "server_name": server_info.get('virtualserver_name', 'Unknown'),
-            "online_users": len(online_clients),
-            "max_clients": int(server_info.get('virtualserver_maxclients', 0)),
-            "uptime": int(server_info.get('virtualserver_uptime', 0)),
-            "clients": online_clients,
-            "last_updated": datetime.now()
-        }
-
-    def get_client_status(self, client_id) -> dict:
-        return self.ts_connection.clientinfo(client_id)
-
-    def format_status_message(self, status: dict) -> discord.Embed:
-        if "error" in status:
+    def create_textual_embed(self, server_info: ServerInfo) -> discord.Embed:
+        if server_info.has_error:
             embed = discord.Embed(
                 title="⚠️ TeamSpeak Server Unavailable",
                 description=f"{self.config.ts3_host}:{self.config.ts3_server_port}",
                 color=discord.Color.red()
             )
-            embed.add_field(name="Error", value=status["error"], inline=False)
+            embed.add_field(
+                name="Error", value=server_info.errormsg, inline=False)
         else:
             embed = discord.Embed(
-                title=f"🎤 {status['server_name']}",
+                title=f"🎤 {server_info.name}",
                 color=discord.Color.green()
             )
 
             embed.add_field(
                 name="👨‍👨‍👦‍👦 Users Online:",
-                value=f"{status['online_users']}/{status['max_clients']}",
+                value=f"{server_info.online_users_count}/{server_info.max_clients}",
                 inline=True
             )
 
-            uptime_hours = status['uptime'] // 3600
-            uptime_minutes = (status['uptime'] % 3600) // 60
             embed.add_field(
                 name="⌚Uptime",
-                value=f"{uptime_hours}h {uptime_minutes}m",
+                value=f"{server_info.uptime_formatted}",
                 inline=True
             )
 
-            if status['clients']:
+            if server_info.clients:
                 user_list = []
-                for client in status['clients']:
-                    nickname = client.get('client_nickname', 'Unknown')
-                    idle_time_ms = int(client.get('client_idle_time', 0))
-                    idle_seconds = idle_time_ms // 1000
-
-                    if idle_seconds < 60:
-                        idle_str = f"{idle_seconds}s"
-                    else:
-                        minutes = idle_seconds // 60
-                        seconds = idle_seconds % 60
-                        idle_str = f"{minutes}m {seconds}s"
-
-                    if idle_seconds < self.config.max_active_seconds:
+                for client in server_info.clients:
+                    if client.idle_time_seconds < self.config.max_active_seconds:
                         status_icon = "🟢"
-                    elif idle_seconds < self.config.max_away_seconds:
+                    elif client.idle_time_seconds < self.config.max_away_seconds:
                         status_icon = "🟡"
                     else:
                         status_icon = "🔴"
 
                     user_list.append(
-                        f"{status_icon} **{nickname}** (*{idle_str}* ago)")
+                        f"{status_icon} **{client.nickname}** (*{client.idle_time_formatted}* ago)")
 
                 embed.add_field(
                     name="👥 Users (last active):",
@@ -143,7 +108,7 @@ class TSBot:
                     inline=False
                 )
 
-        embed.timestamp = status.get('last_updated', datetime.now())
+        embed.timestamp = datetime.now()
         return embed
 
     async def get_channels(self) -> List[Optional[discord.TextChannel]]:
@@ -162,17 +127,16 @@ class TSBot:
     async def update_status(self):
         try:
             channels = await self.get_channels()
-
             try:
-                status = self.get_server_status()
+                status = self.teamspeak.get_server_info()
             except (TS3ConnectionClosedException, Exception) as e:
                 error_msg = "Teamspeak connection closed" if isinstance(
                     e, TS3ConnectionClosedException) else str(e)
                 logger.error(f"{error_msg}. Reconnecting...")
-                status = {"error": "No connection to server!"}
-                self.connect_ts3()
+                status = ServerInfo.from_error('No connection to server!')
+                self.teamspeak.connect()
 
-            embed = self.format_status_message(status)
+            embed = self.create_embed(status)
             for channel in channels:
                 message_id = self.message_ids.get(f"{channel.id}")
                 if message_id is not None:
@@ -199,6 +163,6 @@ class TSBot:
         await self.bot.start(self.config.discord_token)
 
     async def close(self):
-        if self.ts_connection:
-            self.ts_connection.quit()
+        if self.teamspeak:
+            self.teamspeak.close()
         await self.bot.close()

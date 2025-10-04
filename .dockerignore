@@ -18,3 +18,7 @@ CLAUDE.md
 Dockerfile
 docker-compose.yml
 .dockerignore
+docs/
+.venv/
+__pycache__/
+generate_test_images.py

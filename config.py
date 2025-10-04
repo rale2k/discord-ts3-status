@@ -14,6 +14,7 @@ class Config:
     ts3_virtual_server_id: int = 1
     update_interval: int = 30
     use_ssh: bool = True
+    imgbb_api_key: str = ""
 
     max_active_seconds: int = 60
     max_away_seconds: int = 300
@@ -35,6 +36,7 @@ class Config:
             ts3_virtual_server_id=int(os.getenv('TS3_VIRTUAL_SERVER_ID', '1')),
             update_interval=int(os.getenv('UPDATE_INTERVAL', '30')),
             use_ssh=os.getenv('USE_SSH', 'True').lower() in ('true'),
+            imgbb_api_key=os.getenv('IMGBB_API_KEY', ''),
             max_active_seconds=int(os.getenv('MAX_ACTIVE_SECONDS', '60')),
             max_away_seconds=int(os.getenv('MAX_AWAY_SECONDS', '300'))
         )
