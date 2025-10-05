@@ -49,7 +49,7 @@ Just deploy a docker image with the required config variables set.
 - `TS3_USERNAME`: TS3 ServerQuery username (default: serveradmin)
 - `TS3_NICKNAME`: Bot nickname on TS (default: Discord-Bot)
 - `TS3_VIRTUAL_SERVER_ID`: Virtual server ID (default: 1)
-- `UPDATE_INTERVAL`: Update interval in seconds (default: 30)
+- `UPDATE_INTERVAL`: Update interval in seconds (default: 60)
 - `IMGBB_API_KEY`: ImgBB API key for image hosting (optional)
 - `MAX_ACTIVE_SECONDS`: Seconds before user shows as away (default: 60)
 - `MAX_AWAY_SECONDS`: Seconds before user shows as idle (default: 300)

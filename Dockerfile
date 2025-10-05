@@ -14,7 +14,6 @@ ENV TS3_SERVER_PORT="9987"
 ENV TS3_USERNAME="serveradmin"
 ENV TS3_NICKNAME="Discord-Bot"
 ENV TS3_VIRTUAL_SERVER_ID="1"
-ENV UPDATE_INTERVAL="30"
 
 HEALTHCHECK --interval=60s --timeout=10s --start-period=10s --retries=3 \
     CMD pgrep -f "python main.py" > /dev/null

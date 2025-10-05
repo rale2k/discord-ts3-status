@@ -12,7 +12,7 @@ class Config:
     ts3_password: str = ""
     ts3_nickname: str = "Discord-Bot"
     ts3_virtual_server_id: int = 1
-    update_interval: int = 30
+    update_interval: int = 60
     use_ssh: bool = True
     imgbb_api_key: str = ""
 
