@@ -1,3 +1,4 @@
+from zoneinfo import ZoneInfo
 from PIL import Image, ImageDraw, ImageFont
 from datetime import datetime
 import io
@@ -63,7 +64,6 @@ def add_rounded_corners(img, radius) -> Image.Image:
     return img
 
 
-
 def get_status_icon(client_flag_talking, client_input_muted, client_output_muted) -> Image.Image:
     if client_flag_talking:
         ts_logo = Image.open(ICON_PATH_TALKING)
@@ -78,7 +78,7 @@ def get_status_icon(client_flag_talking, client_input_muted, client_output_muted
     return ts_logo
 
 
-def generate_status_image(server_info: ServerInfo , width=450) -> io.BytesIO:
+def generate_status_image(server_info: ServerInfo, tz: str, width=450) -> io.BytesIO:
     font_title = get_font(18)
     font_normal = get_font(13)
     font_small = get_font(11)
@@ -104,16 +104,16 @@ def generate_status_image(server_info: ServerInfo , width=450) -> io.BytesIO:
 
         draw.text((20, y_offset), f"{TEXT_ERROR_PREFIX}{server_info.errormsg}",
                   fill=hex_to_rgb(COLORS["text_secondary"]), font=font_normal)
-        
+
         y_offset += 35
     else:
         draw.text((20, y_offset), f"{server_info.name}",
-                fill=hex_to_rgb(COLORS["text_primary"]), font=font_title)
+                  fill=hex_to_rgb(COLORS["text_primary"]), font=font_title)
 
         y_offset += 35
 
         draw.text((20, y_offset), TEXT_USERS_ONLINE,
-                fill=hex_to_rgb(COLORS["text_secondary"]), font=font_normal)
+                  fill=hex_to_rgb(COLORS["text_secondary"]), font=font_normal)
 
         users_count = f"{server_info.online_users_count}/{server_info.max_clients}"
         draw.text((150, y_offset), users_count, fill=hex_to_rgb(
@@ -121,16 +121,16 @@ def generate_status_image(server_info: ServerInfo , width=450) -> io.BytesIO:
 
         uptime_x = width // 2 + 20
         draw.text((uptime_x + 20, y_offset), TEXT_UPTIME,
-                fill=hex_to_rgb(COLORS["text_secondary"]), font=font_normal)
+                  fill=hex_to_rgb(COLORS["text_secondary"]), font=font_normal)
 
         uptime_value_x = uptime_x + 95
         draw.text((uptime_value_x, y_offset), f"{server_info.uptime_formatted}",
-                fill=hex_to_rgb(COLORS["text_primary"]), font=font_normal)
+                  fill=hex_to_rgb(COLORS["text_primary"]), font=font_normal)
 
         if server_info.online_users:
             y_offset += 25
             draw.text((20, y_offset), TEXT_USERS_HEADER,
-                    fill=hex_to_rgb(COLORS["text_secondary"]), font=font_normal)
+                      fill=hex_to_rgb(COLORS["text_secondary"]), font=font_normal)
             y_offset += 25
 
             for user in server_info.online_users:
@@ -139,22 +139,21 @@ def generate_status_image(server_info: ServerInfo , width=450) -> io.BytesIO:
 
                 circle_x = 0
                 img.paste(status_icon, (circle_x + 20, y_offset),
-                        status_icon if status_icon.mode == 'RGBA' else None)
+                          status_icon if status_icon.mode == 'RGBA' else None)
 
                 username_x = 40
                 draw.text((username_x, y_offset), user.nickname,
-                        fill=hex_to_rgb(COLORS["text_primary"]), font=font_normal)
+                          fill=hex_to_rgb(COLORS["text_primary"]), font=font_normal)
 
                 idle_x = username_x + 180
                 draw.text((idle_x, y_offset), f"({user.idle_time_formatted} {TEXT_AGO_SUFFIX})",
-                        fill=hex_to_rgb(COLORS["text_secondary"]), font=font_small)
+                          fill=hex_to_rgb(COLORS["text_secondary"]), font=font_small)
                 y_offset += 25
         else:
             y_offset += 25
 
-
-        draw.text((20, y_offset), f"{TEXT_LAST_UPDATED} {datetime.now().strftime('%H:%M:%S')}",
-                fill=hex_to_rgb(COLORS["text_secondary"]), font=font_normal)
+        draw.text((20, y_offset), f"{TEXT_LAST_UPDATED} {datetime.now(tz=ZoneInfo(tz)).strftime('%H:%M:%S')}",
+                  fill=hex_to_rgb(COLORS["text_secondary"]), font=font_normal)
 
     img = add_rounded_corners(img, radius=12)
 

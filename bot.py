@@ -2,7 +2,10 @@ from datetime import datetime
 import base64
 import logging
 from typing import List, Optional
+from zoneinfo import ZoneInfo
 
+import cloudinary.uploader
+import cloudinary
 import discord
 from discord.ext import tasks
 import requests
@@ -19,6 +22,7 @@ class Bot:
     def __init__(self, config: Config):
         self.config = config
         self.message_ids: dict = {}
+        self.last_image_public_id: Optional[str] = None
 
         self.bot = discord.Client(intents=discord.Intents.default())
         self.teamspeak: Teamspeak = Teamspeak(config)
@@ -36,26 +40,29 @@ class Bot:
                 seconds=self.config.update_interval)
 
     def create_embed(self, server_info: ServerInfo) -> discord.Embed:
-        if self.config.imgbb_api_key:
+        if self.config.cloudinary_used:
             return self.create_image_embed(server_info)
         else:
             return self.create_textual_embed(server_info)
 
     def create_image_embed(self, server_info: ServerInfo) -> discord.Embed:
         try:
-            img_buffer = generate_status_image(server_info)
-            img_base64 = base64.b64encode(img_buffer.read()).decode('utf-8')
+            img_buffer = generate_status_image(server_info, self.config.timezone)
+            response = cloudinary.uploader.upload(
+                img_buffer, folder="discord-ts3-status", resource_type="image")
 
-            response = requests.post(
-                f'https://api.imgbb.com/1/upload?expiration=21600&key={self.config.imgbb_api_key}',
-                data={'image': img_base64},
-                timeout=10
-            )
+            if self.last_image_public_id:
+                try:
+                    cloudinary.uploader.destroy(self.last_image_public_id)
+                except Exception as e:
+                    logger.warning(f"Failed to delete old image: {e}")
+
+            self.last_image_public_id = response.get("public_id")
 
             embed = discord.Embed()
-            embed.set_image(url=response.json().get("data", {}).get("url"))
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to upload image to imgbb: {e}")
+            embed.set_image(url=response.get("secure_url"))
+        except Exception as e:
+            logger.error(f"Failed to upload image: {e}")
             return self.create_textual_embed(server_info)
         finally:
             img_buffer.close()
@@ -108,7 +115,7 @@ class Bot:
                     inline=False
                 )
 
-        embed.timestamp = datetime.now()
+        embed.timestamp = datetime.now(tz=ZoneInfo(self.config.timezone))
         return embed
 
     async def get_channels(self) -> List[Optional[discord.TextChannel]]:
