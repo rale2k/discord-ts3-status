@@ -3,6 +3,7 @@ from PIL import Image, ImageDraw, ImageFont
 from datetime import datetime
 import io
 
+from config import Config
 from domain import ServerInfo
 
 COLORS = {
@@ -78,11 +79,21 @@ def get_status_icon(client_flag_talking, client_input_muted, client_output_muted
     return ts_logo
 
 
-def generate_status_image(server_info: ServerInfo, tz: str, width=450) -> io.BytesIO:
-    font_title = get_font(18)
-    font_normal = get_font(13)
-    font_small = get_font(11)
+def get_activity_color(idle_time_ms: int, config: Config) -> str:
+    idle_seconds = idle_time_ms // 1000
+    
+    if idle_seconds < config.max_active_seconds:
+        return COLORS["text_secondary"]
+    elif idle_seconds < config.max_away_seconds:
+        return COLORS["yellow"]
+    else:
+        return COLORS["red"]
 
+
+def generate_status_image(server_info: ServerInfo, config: Config, width=450) -> io.BytesIO:
+    font_title = get_font(18)
+    font_normal = get_font(14)
+    font_small = get_font(13)
     base_height = 135
     if not server_info.has_error and server_info.online_users_count > 0:
         user_count = server_info.online_users_count
@@ -146,13 +157,15 @@ def generate_status_image(server_info: ServerInfo, tz: str, width=450) -> io.Byt
                           fill=hex_to_rgb(COLORS["text_primary"]), font=font_normal)
 
                 idle_x = username_x + 180
-                draw.text((idle_x, y_offset), f"({user.idle_time_formatted} {TEXT_AGO_SUFFIX})",
-                          fill=hex_to_rgb(COLORS["text_secondary"]), font=font_small)
+                idle_text = f"({user.idle_time_formatted} {TEXT_AGO_SUFFIX})"
+                idle_color = get_activity_color(user.idle_time, config)
+                draw.text((idle_x, y_offset), idle_text,
+                          fill=hex_to_rgb(idle_color), font=font_small)
                 y_offset += 25
         else:
             y_offset += 25
 
-        draw.text((20, y_offset), f"{TEXT_LAST_UPDATED} {datetime.now(tz=ZoneInfo(tz)).strftime('%H:%M:%S')}",
+        draw.text((20, y_offset), f"{TEXT_LAST_UPDATED} {datetime.now(tz=ZoneInfo(config.timezone)).strftime('%H:%M:%S')}",
                   fill=hex_to_rgb(COLORS["text_secondary"]), font=font_normal)
 
     img = add_rounded_corners(img, radius=12)

@@ -47,7 +47,7 @@ class Bot:
 
     def create_image_embed(self, server_info: ServerInfo) -> discord.Embed:
         try:
-            img_buffer = generate_status_image(server_info, self.config.timezone)
+            img_buffer = generate_status_image(server_info, self.config)
             response = cloudinary.uploader.upload(
                 img_buffer, folder="discord-ts3-status", resource_type="image")
 
