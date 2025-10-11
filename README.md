@@ -51,6 +51,8 @@ Just deploy a docker image with the required config variables set.
 - `TS3_VIRTUAL_SERVER_ID`: Virtual server ID (default: 1)
 - `UPDATE_INTERVAL`: Update interval in seconds (default: 60)
 - `CLOUDINARY_API_KEY`: Cloudinary API key for image hosting (optional)
+- `CLOUDINARY_CLOUD_NAME`: Cloudinary Cloud name for image hosting (optional)
+- `CLOUDINARY_API_SECRET`: Cloudinary API secret key for image hosting (optional)
 - `MAX_ACTIVE_SECONDS`: Seconds before user shows as away (default: 60)
 - `MAX_AWAY_SECONDS`: Seconds before user shows as idle (default: 300)
 - `TIMEZONE`: IANA timezone for timestamps ('Europe/Berlin', 'America/New_York') (default: Europe/London)
