@@ -7,7 +7,7 @@ import gettext
 from config import Config
 from domain import ServerInfo
 
-lang = gettext.translation('ts3-status', localedir='locales', languages=[config.language], fallback=True)
+lang = gettext.translation('ts3-status', localedir='locales', languages=[Config.language], fallback=True)
 lang.install()
 _ = lang.gettext
 
