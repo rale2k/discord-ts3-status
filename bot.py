@@ -50,16 +50,16 @@ class Bot:
 
             response = requests.post(f'https://api.imgbb.com/1/upload?expiration=21600&key={self.config.imgbb_api_key}', data={'image': img_base64}, timeout=10)
 
+            data = response.json()
             if self.last_image_public_id:
                 try:
                     cloudinary.uploader.destroy(self.last_image_public_id)
                 except Exception as e:
                     logger.warning(f"Failed to delete old image: {e}")
 
-            self.last_image_public_id = response.get("public_id")
+            self.last_image_public_id = data.get("public_id")
 
             embed = discord.Embed()
-            data = response.json()
             url = data.get("data", {}).get("url")
             embed.set_image(url=url)
         except requests.exceptions.RequestException as e:
