@@ -155,7 +155,7 @@ class Bot:
                         self.message_ids.update(
                             {f"{channel.id}": f"{message.id}"})
                 else:
-                    await channel.purge()
+                    await channel.purge(limit=100, check=lambda m: m.author == self.bot.user)
                     message = await channel.send(embed=embed)
                     self.message_ids.update({f"{channel.id}": f"{message.id}"})
 
