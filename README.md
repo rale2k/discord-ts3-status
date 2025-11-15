@@ -10,9 +10,9 @@ Supports posting to multiple Discord channels. Assumes necessary privileges have
 
 Supports SSH/Telnet connections. For TeamSpeak 6 servers, SSH is **required**.
 
-Image based monitoring requires an [Cloudinary](https://cloudinary.com/) API key in Discord message attachments cannot be edited. Every update, a new image is uploaded to Cloudinary and the embed is updated to show the new URL. Free version works good enough.
+Image based monitoring requires an [imgBB](https://api.imgbb.com/) API key in Discord message attachments cannot be edited. Every update, a new image is uploaded to imgBB with an expiration date of 6h and the embed is updated to show the new URL.
 
-Missing the Cloudinary API key, a [text based fallback view is supported](docs/text_fallback.png).
+Missing the imgBB API key, a [text based fallback view is supported](docs/text_fallback.png).
 
 ## Setup
 ### Docker (recommended)
@@ -50,9 +50,7 @@ Just deploy a docker image with the required config variables set.
 - `TS3_NICKNAME`: Bot nickname on TS (default: Discord-Bot)
 - `TS3_VIRTUAL_SERVER_ID`: Virtual server ID (default: 1)
 - `UPDATE_INTERVAL`: Update interval in seconds (default: 60)
-- `CLOUDINARY_API_KEY`: Cloudinary API key for image hosting (optional)
-- `CLOUDINARY_CLOUD_NAME`: Cloudinary Cloud name for image hosting (optional)
-- `CLOUDINARY_API_SECRET`: Cloudinary API secret key for image hosting (optional)
+- `IMGBB_API_KEY`: ImgBB API key for image hosting (optional)
 - `MAX_ACTIVE_SECONDS`: Seconds before user shows as away (default: 60)
 - `MAX_AWAY_SECONDS`: Seconds before user shows as idle (default: 300)
 - `TIMEZONE`: IANA timezone for timestamps ('Europe/Berlin', 'America/New_York') (default: Europe/London)
