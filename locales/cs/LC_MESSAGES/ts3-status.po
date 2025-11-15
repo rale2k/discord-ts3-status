@@ -26,7 +26,7 @@ msgstr "Uživatelé online:"
 
 #: your_script.py:23
 msgid "Uptime:"
-msgstr "Provozní doba:"
+msgstr "Dostupnost"
 
 #: your_script.py:24
 msgid "Users (last active):"
