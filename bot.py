@@ -20,7 +20,6 @@ class Bot:
     def __init__(self, config: Config):
         self.config = config
         self.message_ids: dict = {}
-        self.last_image_public_id: Optional[str] = None
 
         self.bot = discord.Client(intents=discord.Intents.default())
         self.teamspeak: Teamspeak = Teamspeak(config)
@@ -51,7 +50,6 @@ class Bot:
             response = requests.post(f'https://api.imgbb.com/1/upload?expiration=21600&key={self.config.imgbb_api_key}', data={'image': img_base64}, timeout=10)
 
             data = response.json()
-            self.last_image_public_id = data.get("public_id")
 
             embed = discord.Embed()
             url = data.get("data", {}).get("url")
