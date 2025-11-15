@@ -59,7 +59,9 @@ class Bot:
             self.last_image_public_id = response.get("public_id")
 
             embed = discord.Embed()
-            embed.set_image(url=response.json().get("data", {}).get("url"))
+            data = response.json()
+            url = data.get("data", {}).get("url")
+            embed.set_image(url=url)
         except requests.exceptions.RequestException as e:
             logger.error(f"Failed to upload image to imgbb: {e}")
             return self.create_textual_embed(server_info)
