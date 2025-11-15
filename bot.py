@@ -47,7 +47,7 @@ class Bot:
             img_buffer = generate_status_image(server_info, self.config)
             img_base64 = base64.b64encode(img_buffer.read()).decode('utf-8')
 
-            response = requests.post(f'https://api.imgbb.com/1/upload?expiration=100&key={self.config.imgbb_api_key}', data={'image': img_base64}, timeout=10)
+            response = requests.post(f'https://api.imgbb.com/1/upload?expiration=120&key={self.config.imgbb_api_key}', data={'image': img_base64}, timeout=10)
 
             data = response.json()
 
