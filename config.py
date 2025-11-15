@@ -21,7 +21,7 @@ class Config:
     max_active_seconds: int = 60
     max_away_seconds: int = 300
 
-    language: str
+    language: str = 'en'
 
     @classmethod
     def from_env(cls) -> 'Config':
