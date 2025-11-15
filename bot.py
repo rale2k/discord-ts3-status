@@ -20,6 +20,7 @@ class Bot:
     def __init__(self, config: Config):
         self.config = config
         self.message_ids: dict = {}
+        self.last_image_public_id: Optional[str] = None
 
         self.bot = discord.Client(intents=discord.Intents.default())
         self.teamspeak: Teamspeak = Teamspeak(config)
