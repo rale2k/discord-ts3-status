@@ -17,7 +17,7 @@ Missing the imgBB API key, a [text based fallback view is supported](docs/text_f
 ## Setup
 ### Docker (recommended)
 Just deploy a docker image with the required config variables set.
-[Docker Hub](https://hub.docker.com/repository/docker/rex2630/ts3-status/)
+[Docker Hub](https://hub.docker.com/r/rex2630/ts3-status)
 [Example compose file](./docker-compose.yml)
 
 ### Locally (for testing)
