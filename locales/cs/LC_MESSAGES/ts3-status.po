@@ -1,0 +1,45 @@
+# Překladový soubor cs.po
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: cs\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.8\n"
+
+#: your_script.py:20
+msgid "TeamSpeak Server Unavailable"
+msgstr "Server TeamSpeak není dostupný"
+
+#: your_script.py:21
+msgid "Error: "
+msgstr "Chyba: "
+
+#: your_script.py:22
+msgid "Users Online:"
+msgstr "Uživatelé online:"
+
+#: your_script.py:23
+msgid "Uptime:"
+msgstr "Provozní doba:"
+
+#: your_script.py:24
+msgid "Users (last active):"
+msgstr "Uživatelé (poslední aktivita):"
+
+#: your_script.py:25
+msgid "No users online"
+msgstr "Žádní uživatelé online"
+
+#: your_script.py:26
+msgid "ago"
+msgstr "zpět"
+
+#: your_script.py:27
+msgid "Last updated at"
+msgstr "Naposledy aktualizováno v"

@@ -2,9 +2,14 @@ from zoneinfo import ZoneInfo
 from PIL import Image, ImageDraw, ImageFont
 from datetime import datetime
 import io
+import gettext
 
 from config import Config
 from domain import ServerInfo
+
+lang = gettext.translation('ts3-status', localedir='locales', languages=[config.language], fallback=True)
+lang.install()
+_ = lang.gettext
 
 COLORS = {
     "card_bg": "#1e1f22",
@@ -24,14 +29,14 @@ ICON_PATH_INPUT_MUTED = 'resources/input_muted.png'
 ICON_PATH_OUTPUT_MUTED = 'resources/output_muted.png'
 ICON_PATH_DEFAULT = 'resources/user.png'
 
-TEXT_ERROR_TITLE = "TeamSpeak Server Unavailable"
-TEXT_ERROR_PREFIX = "Error: "
-TEXT_USERS_ONLINE = "Users Online:"
-TEXT_UPTIME = "Uptime:"
-TEXT_USERS_HEADER = "Users (last active):"
-TEXT_NO_USERS = "No users online"
-TEXT_AGO_SUFFIX = "ago"
-TEXT_LAST_UPDATED = "Last updated at"
+TEXT_ERROR_TITLE = _("TeamSpeak Server Unavailable")
+TEXT_ERROR_PREFIX = _("Error: ")
+TEXT_USERS_ONLINE = _("Users Online:")
+TEXT_UPTIME = _("Uptime:")
+TEXT_USERS_HEADER = _("Users (last active):")
+TEXT_NO_USERS = _("No users online")
+TEXT_AGO_SUFFIX = _("ago")
+TEXT_LAST_UPDATED = _("Last updated at")
 
 HEIGHT_BASE = 135
 LINE_HEIGHT = 25

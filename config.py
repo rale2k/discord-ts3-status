@@ -21,6 +21,8 @@ class Config:
     max_active_seconds: int = 60
     max_away_seconds: int = 300
 
+    language: str = 'en'
+
     @classmethod
     def from_env(cls) -> 'Config':
         return cls(
@@ -42,4 +44,5 @@ class Config:
             imgbb_api_key=os.getenv('IMGBB_API_KEY', ''),
             max_active_seconds=int(os.getenv('MAX_ACTIVE_SECONDS', '60')),
             max_away_seconds=int(os.getenv('MAX_AWAY_SECONDS', '300'))
+            languageint(os.getenv('LANGUAGE', 'en'))
         )
