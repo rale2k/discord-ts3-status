@@ -1,7 +1,6 @@
 import os
 from dataclasses import dataclass
 
-import cloudinary
 @dataclass
 class Config:
     discord_token: str
@@ -17,23 +16,13 @@ class Config:
     ts3_virtual_server_id: int = 1
     update_interval: int = 60
     use_ssh: bool = True
-    cloudinary_used: bool = False
+    imgbb_api_key: str = ""
 
     max_active_seconds: int = 60
     max_away_seconds: int = 300
 
     @classmethod
     def from_env(cls) -> 'Config':
-        cloudinary_api_key = os.getenv('CLOUDINARY_API_KEY', '')
-        cloudinary_cloud_name = os.getenv('CLOUDINARY_CLOUD_NAME', '')
-        cloudinary_api_secret = os.getenv('CLOUDINARY_API_SECRET', '')
-        if cloudinary_api_key and cloudinary_cloud_name and cloudinary_api_secret:
-            cloudinary.config(
-                cloud_name=cloudinary_cloud_name,
-                api_key=cloudinary_api_key,
-                api_secret=cloudinary_api_secret,
-                secure=True
-            )
         return cls(
             discord_token=os.getenv('DISCORD_TOKEN', ''),
             discord_channel_ids=[
@@ -50,7 +39,7 @@ class Config:
             ts3_virtual_server_id=int(os.getenv('TS3_VIRTUAL_SERVER_ID', '1')),
             update_interval=int(os.getenv('UPDATE_INTERVAL', '30')),
             use_ssh=os.getenv('USE_SSH', 'True').lower() in ('true'),
-            cloudinary_used=bool(cloudinary_api_key and cloudinary_cloud_name and cloudinary_api_secret),
+            imgbb_api_key=os.getenv('IMGBB_API_KEY', ''),
             max_active_seconds=int(os.getenv('MAX_ACTIVE_SECONDS', '60')),
             max_away_seconds=int(os.getenv('MAX_AWAY_SECONDS', '300'))
         )
