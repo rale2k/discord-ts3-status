@@ -43,6 +43,6 @@ class Config:
             use_ssh=os.getenv('USE_SSH', 'True').lower() in ('true'),
             imgbb_api_key=os.getenv('IMGBB_API_KEY', ''),
             max_active_seconds=int(os.getenv('MAX_ACTIVE_SECONDS', '60')),
-            max_away_seconds=int(os.getenv('MAX_AWAY_SECONDS', '300'))
-            languageint(os.getenv('LANGUAGE', 'en'))
+            max_away_seconds=int(os.getenv('MAX_AWAY_SECONDS', '300')),
+            language=int(os.getenv('LANGUAGE', 'en'))
         )
