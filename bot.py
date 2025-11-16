@@ -1,6 +1,8 @@
 from datetime import datetime
 import base64
 import logging
+import hashlib
+import time
 from typing import List, Optional
 from zoneinfo import ZoneInfo
 
@@ -14,7 +16,6 @@ from image import generate_status_image
 from teamspeak import Teamspeak
 
 logger = logging.getLogger(__name__)
-
 
 class Bot:
     def __init__(self, config: Config):
@@ -37,30 +38,88 @@ class Bot:
                 seconds=self.config.update_interval)
 
     def create_embed(self, server_info: ServerInfo) -> discord.Embed:
-        if self.config.imgbb_api_key:
+        if self.config.imgur_client_id:
             return self.create_image_embed(server_info)
         else:
             return self.create_textual_embed(server_info)
 
     def create_image_embed(self, server_info: ServerInfo) -> discord.Embed:
+        # Requires config.imgur_client_id to be set
+        img_buffer = None
         try:
             img_buffer = generate_status_image(server_info, self.config)
-            img_base64 = base64.b64encode(img_buffer.read()).decode('utf-8')
+            img_buffer.seek(0)
+            img_bytes = img_buffer.read()
+            img_hash = hashlib.sha256(img_bytes).hexdigest()
 
-            response = requests.post(f'https://api.imgbb.com/1/upload?expiration=120&key={self.config.imgbb_api_key}', data={'image': img_base64}, timeout=10)
+            # reuse last uploaded image url to avoid rate limits if identical recently
+            now = time.time()
+            last_url = getattr(self, "_last_img_url", None)
+            last_hash = getattr(self, "_last_image_hash", None)
+            last_time = getattr(self, "_last_upload_time", 0)
+            cache_ttl = 100
+            if last_url and last_hash == img_hash and (now - last_time) < cache_ttl:
+                embed = discord.Embed()
+                embed.set_image(url=last_url)
+                return embed
+
+            img_base64 = base64.b64encode(img_bytes).decode('utf-8')
+
+            headers = {
+                "Authorization": f"Client-ID {self.config.imgur_client_id}"
+            }
+            response = requests.post(
+                "https://api.imgur.com/3/image",
+                headers=headers,
+                data={"image": img_base64, "type": "base64"},
+                timeout=15
+            )
+
+            logger.debug("imgur status: %s", response.status_code)
+            logger.debug("imgur raw response: %s", response.text)
+            try:
+                response.raise_for_status()
+            except requests.exceptions.HTTPError:
+                try:
+                    err = response.json()
+                except Exception:
+                    err = response.text
+                logger.error("imgur HTTP error %s: %s", response.status_code, err)
+                # try reuse cached url on rate-limit or other transient error
+                if last_url:
+                    embed = discord.Embed()
+                    embed.set_image(url=last_url)
+                    return embed
+                return self.create_textual_embed(server_info)
 
             data = response.json()
+            url = data.get("data", {}).get("link")
+            if not url:
+                logger.error("No link returned from imgur, response json: %s", data)
+                return self.create_textual_embed(server_info)
+
+            # cache last successful upload
+            self._last_img_url = url
+            self._last_image_hash = img_hash
+            self._last_upload_time = time.time()
 
             embed = discord.Embed()
-            url = data.get("data", {}).get("url")
             embed.set_image(url=url)
+            return embed
         except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to upload image to imgbb: {e}")
+            logger.error(f"Failed to upload image to imgur: {e}")
+            last_url = getattr(self, "_last_img_url", None)
+            if last_url:
+                embed = discord.Embed()
+                embed.set_image(url=last_url)
+                return embed
             return self.create_textual_embed(server_info)
         finally:
-            img_buffer.close()
-
-        return embed
+            if img_buffer is not None:
+                try:
+                    img_buffer.close()
+                except Exception:
+                    pass
 
     def create_textual_embed(self, server_info: ServerInfo) -> discord.Embed:
         if server_info.has_error:
