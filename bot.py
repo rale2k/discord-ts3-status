@@ -182,10 +182,45 @@ class Bot:
             channels.append(channel)
         return channels
 
+    async def get_voice_channels(self) -> List[Optional[discord.VoiceChannel]]:
+        channels = []
+        for id in getattr(self.config, "discord_voice_channel_ids", []):
+            channel = self.bot.get_channel(id)
+            if not channel:
+                logger.warning(f"Discord voice channel with id {id} not found")
+                continue
+            # pro jistotu ověříme, že je to hlasový kanál
+            if getattr(channel, "type", None) != discord.ChannelType.voice:
+                logger.warning(f"Channel {id} is not a voice channel (type={channel.type})")
+                continue
+            channels.append(channel)
+        return channels
+
+    async def update_voice_channel_count(self, server_info: ServerInfo, channels: List[discord.VoiceChannel]):
+        if not channels:
+            return
+
+        template = getattr(self.config, "discord_voice_channel_name_template", "Na Teamspeaku: {count}")
+        new_name = template.format(count=server_info.online_users_count, max=server_info.max_clients)
+
+        for channel in channels:
+            if not channel:
+                continue
+            if channel.name == new_name:
+                continue
+            try:
+                await channel.edit(name=new_name)
+                logger.info(f"Updated voice channel name for {channel.id} -> {new_name}")
+            except discord.Forbidden:
+                logger.warning(f"No permission to rename channel {channel.id}")
+            except Exception as e:
+                logger.error(f"Failed to update channel name {channel.id}: {e}")
+
     @tasks.loop(seconds=30)
     async def update_status(self):
         try:
             channels = await self.get_channels()
+            voice_channels = await self.get_voice_channels()
             try:
                 status = self.teamspeak.get_server_info()
             except (TS3ConnectionClosedException, Exception) as e:
@@ -210,6 +245,9 @@ class Bot:
                     await channel.purge(limit=100, check=lambda m: m.author == self.bot.user)
                     message = await channel.send(embed=embed)
                     self.message_ids.update({f"{channel.id}": f"{message.id}"})
+
+            if voice_channels:
+                await self.update_voice_channel_count(status, voice_channels)
 
         except Exception as e:
             logger.error(f"Error updating status: {e}")
