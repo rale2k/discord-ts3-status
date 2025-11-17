@@ -37,89 +37,36 @@ class Bot:
             self.update_status.change_interval(
                 seconds=self.config.update_interval)
 
-    def create_embed(self, server_info: ServerInfo) -> discord.Embed:
-        if self.config.imgur_client_id:
+    def create_embed(self, server_info: ServerInfo) -> tuple[discord.Embed, Optional[discord.File]]:
+        """Vrací (embed, file) — file může být None."""
+        if self.config.use_image_embed:
             return self.create_image_embed(server_info)
         else:
-            return self.create_textual_embed(server_info)
+            return self.create_textual_embed(server_info), None
 
-    def create_image_embed(self, server_info: ServerInfo) -> discord.Embed:
-        # Requires config.imgur_client_id to be set
+    def create_image_embed(self, server_info: ServerInfo) -> tuple[discord.Embed, Optional[discord.File]]:
+        """Vytvoří embed s obrázkem — obrázek se pošle jako attachment."""
         img_buffer = None
         try:
             img_buffer = generate_status_image(server_info, self.config)
             img_buffer.seek(0)
-            img_bytes = img_buffer.read()
-            img_hash = hashlib.sha256(img_bytes).hexdigest()
-
-            # reuse last uploaded image url to avoid rate limits if identical recently
-            now = time.time()
-            last_url = getattr(self, "_last_img_url", None)
-            last_hash = getattr(self, "_last_image_hash", None)
-            last_time = getattr(self, "_last_upload_time", 0)
-            cache_ttl = 100
-            if last_url and last_hash == img_hash and (now - last_time) < cache_ttl:
-                embed = discord.Embed()
-                embed.set_image(url=last_url)
-                return embed
-
-            img_base64 = base64.b64encode(img_bytes).decode('utf-8')
-
-            headers = {
-                "Authorization": f"Client-ID {self.config.imgur_client_id}"
-            }
-            response = requests.post(
-                "https://api.imgur.com/3/image",
-                headers=headers,
-                data={"image": img_base64, "type": "base64"},
-                timeout=15
-            )
-
-            logger.debug("imgur status: %s", response.status_code)
-            logger.debug("imgur raw response: %s", response.text)
-            try:
-                response.raise_for_status()
-            except requests.exceptions.HTTPError:
-                try:
-                    err = response.json()
-                except Exception:
-                    err = response.text
-                logger.error("imgur HTTP error %s: %s", response.status_code, err)
-                # try reuse cached url on rate-limit or other transient error
-                if last_url:
-                    embed = discord.Embed()
-                    embed.set_image(url=last_url)
-                    return embed
-                return self.create_textual_embed(server_info)
-
-            data = response.json()
-            url = data.get("data", {}).get("link")
-            if not url:
-                logger.error("No link returned from imgur, response json: %s", data)
-                return self.create_textual_embed(server_info)
-
-            # cache last successful upload
-            self._last_img_url = url
-            self._last_image_hash = img_hash
-            self._last_upload_time = time.time()
-
-            embed = discord.Embed()
-            embed.set_image(url=url)
-            return embed
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to upload image to imgur: {e}")
-            last_url = getattr(self, "_last_img_url", None)
-            if last_url:
-                embed = discord.Embed()
-                embed.set_image(url=last_url)
-                return embed
-            return self.create_textual_embed(server_info)
+            
+            # Vytvoříme discord.File z bufferu
+            file = discord.File(img_buffer, filename="status.png")
+            
+            # Embed s referencí na attachment
+            embed = discord.Embed(color=discord.Color.green())
+            embed.set_image(url="attachment://status.png")
+            embed.timestamp = datetime.now(tz=ZoneInfo(self.config.timezone))
+            
+            return embed, file
+            
+        except Exception as e:
+            logger.error(f"Failed to generate status image: {e}")
+            return self.create_textual_embed(server_info), None
         finally:
             if img_buffer is not None:
-                try:
-                    img_buffer.close()
-                except Exception:
-                    pass
+                img_buffer.close()
 
     def create_textual_embed(self, server_info: ServerInfo) -> discord.Embed:
         if server_info.has_error:
@@ -224,27 +171,31 @@ class Bot:
             try:
                 status = self.teamspeak.get_server_info()
             except (TS3ConnectionClosedException, Exception) as e:
-                error_msg = "Teamspeak connection closed" if isinstance(
-                    e, TS3ConnectionClosedException) else str(e)
-                logger.error(f"{error_msg}. Reconnecting...")
-                status = ServerInfo.from_error('No connection to server!')
+                logger.error(f"Error getting server info: {e}")
                 self.teamspeak.connect()
 
-            embed = self.create_embed(status)
+            embed, file = self.create_embed(status)  # nyní vrací i file
+            
             for channel in channels:
-                message_id = self.message_ids.get(f"{channel.id}")
-                if message_id is not None:
-                    try:
-                        message = await channel.fetch_message(int(message_id))
-                        await message.edit(embed=embed)
-                    except (discord.NotFound):
-                        message = await channel.send(embed=embed)
-                        self.message_ids.update(
-                            {f"{channel.id}": f"{message.id}"})
-                else:
-                    await channel.purge(limit=100, check=lambda m: m.author == self.bot.user)
-                    message = await channel.send(embed=embed)
-                    self.message_ids.update({f"{channel.id}": f"{message.id}"})
+                if not channel:
+                    continue
+                    
+                message_id = self.message_ids.get(channel.id)
+                try:
+                    if message_id:
+                        try:
+                            message = await channel.fetch_message(message_id)
+                            # Editujeme zprávu — posíláme embed a file
+                            await message.edit(embed=embed, attachments=[file] if file else [])
+                        except discord.NotFound:
+                            # Zpráva byla smazána, vytvoříme novou
+                            msg = await channel.send(embed=embed, file=file)
+                            self.message_ids[channel.id] = msg.id
+                    else:
+                        msg = await channel.send(embed=embed, file=file)
+                        self.message_ids[channel.id] = msg.id
+                except Exception as e:
+                    logger.error(f"Error updating channel {channel.id}: {e}")
 
             if voice_channels:
                 await self.update_voice_channel_count(status, voice_channels)

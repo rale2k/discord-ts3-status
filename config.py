@@ -18,14 +18,11 @@ class Config:
     ts3_virtual_server_id: int = 1
     update_interval: int = 70
     use_ssh: bool = True
-    imgur_client_id: str = ""
-
     max_active_seconds: int = 60
     max_away_seconds: int = 300
-
     language: str = 'cs'
-
     discord_voice_channel_name_template: str = "Na Teamspeaku: {count}"
+    use_image_embed: bool = False
 
     @classmethod
     def from_env(cls) -> 'Config':
@@ -49,9 +46,9 @@ class Config:
             ts3_virtual_server_id=int(os.getenv('TS3_VIRTUAL_SERVER_ID', '1')),
             update_interval=int(os.getenv('UPDATE_INTERVAL', '70')),
             use_ssh=os.getenv('USE_SSH', 'True').lower() in ('true', '1', 'yes'),
-            imgur_client_id=os.getenv('IMGUR_CLIENT_ID', ''),
             max_active_seconds=int(os.getenv('MAX_ACTIVE_SECONDS', '60')),
             max_away_seconds=int(os.getenv('MAX_AWAY_SECONDS', '300')),
             language=os.getenv('LANGUAGE', 'cs'),
-            discord_voice_channel_name_template=os.getenv('DISCORD_VOICE_CHANNEL_NAME_TEMPLATE', "Na Teamspeaku: {count}")
+            discord_voice_channel_name_template=os.getenv('DISCORD_VOICE_CHANNEL_NAME_TEMPLATE', "Na Teamspeaku: {count}"),
+            use_image_embed=os.getenv('USE_IMAGE_EMBED', 'False').lower() in ('true', '1', 'yes')
         )
