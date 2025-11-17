@@ -38,26 +38,21 @@ class Bot:
                 seconds=self.config.update_interval)
 
     def create_embed(self, server_info: ServerInfo) -> tuple[discord.Embed, Optional[discord.File]]:
-        """Vrací (embed, file) — file může být None."""
         if self.config.use_image_embed:
             return self.create_image_embed(server_info)
         else:
             return self.create_textual_embed(server_info), None
 
     def create_image_embed(self, server_info: ServerInfo) -> tuple[discord.Embed, Optional[discord.File]]:
-        """Vytvoří embed s obrázkem — obrázek se pošle jako attachment."""
         img_buffer = None
         try:
             img_buffer = generate_status_image(server_info, self.config)
             img_buffer.seek(0)
-            
-            # Vytvoříme discord.File z bufferu
+
             file = discord.File(img_buffer, filename="status.png")
-            
-            # Embed s referencí na attachment
+
             embed = discord.Embed(color=discord.Color.green())
             embed.set_image(url="attachment://status.png")
-            embed.timestamp = datetime.now(tz=ZoneInfo(self.config.timezone))
             
             return embed, file
             
@@ -114,7 +109,6 @@ class Bot:
                     inline=False
                 )
 
-        embed.timestamp = datetime.now(tz=ZoneInfo(self.config.timezone))
         return embed
 
     async def get_channels(self) -> List[Optional[discord.TextChannel]]:
@@ -136,7 +130,6 @@ class Bot:
             if not channel:
                 logger.warning(f"Discord voice channel with id {id} not found")
                 continue
-            # pro jistotu ověříme, že je to hlasový kanál
             if getattr(channel, "type", None) != discord.ChannelType.voice:
                 logger.warning(f"Channel {id} is not a voice channel (type={channel.type})")
                 continue
@@ -174,7 +167,7 @@ class Bot:
                 logger.error(f"Error getting server info: {e}")
                 self.teamspeak.connect()
 
-            embed, file = self.create_embed(status)  # nyní vrací i file
+            embed, file = self.create_embed(status)
             
             for channel in channels:
                 if not channel:
@@ -185,10 +178,8 @@ class Bot:
                     if message_id:
                         try:
                             message = await channel.fetch_message(message_id)
-                            # Editujeme zprávu — posíláme embed a file
                             await message.edit(embed=embed, attachments=[file] if file else [])
                         except discord.NotFound:
-                            # Zpráva byla smazána, vytvoříme novou
                             msg = await channel.send(embed=embed, file=file)
                             self.message_ids[channel.id] = msg.id
                     else:
