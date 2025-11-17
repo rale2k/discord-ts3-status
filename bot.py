@@ -183,6 +183,7 @@ class Bot:
                             msg = await channel.send(embed=embed, file=file)
                             self.message_ids[channel.id] = msg.id
                     else:
+                        await channel.purge(limit=100, check=lambda m: m.author == self.bot.user)
                         msg = await channel.send(embed=embed, file=file)
                         self.message_ids[channel.id] = msg.id
                 except Exception as e:
