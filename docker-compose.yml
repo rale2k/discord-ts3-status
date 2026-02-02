@@ -4,7 +4,7 @@ services:
   ts3-discord-status:
     build: .
     container_name: ts3-discord-status
-    image: rale2k/discord-ts3-status:latest
+    image: rex2630/ts3-status:latest
     restart: unless-stopped
     environment:
       # Required
