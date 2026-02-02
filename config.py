@@ -20,7 +20,7 @@ class Config:
     use_ssh: bool = True
     max_active_seconds: int = 60
     max_away_seconds: int = 300
-    language: str = 'cs'
+    language: str = 'en'
     discord_voice_channel_name_template: str = "Na Teamspeaku: {count}"
     use_image_embed: bool = False
 
