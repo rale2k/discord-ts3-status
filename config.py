@@ -48,7 +48,7 @@ class Config:
             use_ssh=os.getenv('USE_SSH', 'True').lower() in ('true', '1', 'yes'),
             max_active_seconds=int(os.getenv('MAX_ACTIVE_SECONDS', '60')),
             max_away_seconds=int(os.getenv('MAX_AWAY_SECONDS', '300')),
-            language=os.getenv('LANGUAGE', 'cs'),
+            language=os.getenv('LANGUAGE', 'en'),
             discord_voice_channel_name_template=os.getenv('DISCORD_VOICE_CHANNEL_NAME_TEMPLATE', "Na Teamspeaku: {count}"),
             use_image_embed=os.getenv('USE_IMAGE_EMBED', 'False').lower() in ('true', '1', 'yes')
         )
