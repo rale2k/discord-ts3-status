@@ -10,9 +10,7 @@ Supports posting to multiple Discord channels. Assumes necessary privileges have
 
 Supports SSH/Telnet connections. For TeamSpeak 6 servers, SSH is **required**.
 
-Image based monitoring requires an [imgBB](https://api.imgbb.com/) API key in Discord message attachments cannot be edited. Every update, a new image is uploaded to imgBB with an expiration date of 6h and the embed is updated to show the new URL.
-
-Missing the imgBB API key, a [text based fallback view is supported](docs/text_fallback.png).
+[Text based fallback view is supported](docs/text_fallback.png).
 
 ## Setup
 ### Docker (recommended)
@@ -54,3 +52,4 @@ Just deploy a docker image with the required config variables set.
 - `MAX_ACTIVE_SECONDS`: Seconds before user shows as away (default: 60)
 - `MAX_AWAY_SECONDS`: Seconds before user shows as idle (default: 300)
 - `TIMEZONE`: IANA timezone for timestamps ('Europe/Berlin', 'America/New_York') (default: Europe/London)
+- `LANGUAGE`: You can switch to a supported language
