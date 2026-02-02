@@ -7,9 +7,14 @@ import gettext
 from config import Config
 from domain import ServerInfo
 
-lang = gettext.translation('ts3-status', localedir='locales', languages=[Config.language], fallback=True)
-lang.install()
-_ = lang.gettext
+_translator_cache = {}
+
+def get_gettext(config: Config):
+    """Get translator for the config's language, with caching"""
+    if config.language not in _translator_cache:
+        lang = gettext.translation('ts3-status', localedir='locales', languages=[config.language], fallback=True)
+        _translator_cache[config.language] = lang.gettext
+    return _translator_cache[config.language]
 
 COLORS = {
     "card_bg": "#1e1f22",
@@ -29,14 +34,17 @@ ICON_PATH_INPUT_MUTED = 'resources/input_muted.png'
 ICON_PATH_OUTPUT_MUTED = 'resources/output_muted.png'
 ICON_PATH_DEFAULT = 'resources/user.png'
 
-TEXT_ERROR_TITLE = _("TeamSpeak Server Unavailable")
-TEXT_ERROR_PREFIX = _("Error: ")
-TEXT_USERS_ONLINE = _("Users Online:")
-TEXT_UPTIME = _("Uptime:")
-TEXT_USERS_HEADER = _("Users (last active):")
-TEXT_NO_USERS = _("No users online")
-TEXT_AGO_SUFFIX = _("ago")
-TEXT_LAST_UPDATED = _("Last updated at")
+# These strings will be translated at runtime based on config.language
+TEXT_STRINGS = {
+    "ERROR_TITLE": "TeamSpeak Server Unavailable",
+    "ERROR_PREFIX": "Error: ",
+    "USERS_ONLINE": "Users Online:",
+    "UPTIME": "Uptime:",
+    "USERS_HEADER": "Users (last active):",
+    "NO_USERS": "No users online",
+    "AGO_SUFFIX": "ago",
+    "LAST_UPDATED": "Last updated at"
+}
 
 HEIGHT_BASE = 135
 LINE_HEIGHT = 25
@@ -93,18 +101,18 @@ def get_activity_color(idle_time_ms: int, config: Config) -> str:
     else:
         return COLORS["red"]
 
-def draw_error(draw, errormsg, width, y_offset):
+def draw_error(draw, errormsg, width, y_offset, _translate):
     font_title = get_font(FONT_SIZES["title"])
     font_normal = get_font(FONT_SIZES["normal"])
-    draw.text((PADDING_LEFT, y_offset), TEXT_ERROR_TITLE,
+    draw.text((PADDING_LEFT, y_offset), _translate(TEXT_STRINGS["ERROR_TITLE"]),
               fill=hex_to_rgb(COLORS["red"]), font=font_title)
     y_offset += 35
-    draw.text((PADDING_LEFT, y_offset), f"{TEXT_ERROR_PREFIX}{errormsg}",
+    draw.text((PADDING_LEFT, y_offset), f"{_translate(TEXT_STRINGS['ERROR_PREFIX'])}{errormsg}",
               fill=hex_to_rgb(COLORS["text_secondary"]), font=font_normal)
     y_offset += 35
     return y_offset
 
-def draw_header(draw, server_info, width, y_offset):
+def draw_header(draw, server_info, width, y_offset, _translate):
     font_title = get_font(FONT_SIZES["title"])
     font_normal = get_font(FONT_SIZES["normal"])
 
@@ -113,7 +121,7 @@ def draw_header(draw, server_info, width, y_offset):
 
     y_offset += 35
 
-    draw.text((PADDING_LEFT, y_offset), TEXT_USERS_ONLINE,
+    draw.text((PADDING_LEFT, y_offset), _translate(TEXT_STRINGS["USERS_ONLINE"]),
               fill=hex_to_rgb(COLORS["text_secondary"]), font=font_normal)
 
     users_count = f"{server_info.online_users_count}/{server_info.max_clients}"
@@ -121,7 +129,7 @@ def draw_header(draw, server_info, width, y_offset):
               fill=hex_to_rgb(COLORS["text_primary"]), font=font_normal)
 
     uptime_x = width // 2 + 20
-    draw.text((uptime_x + 20, y_offset), TEXT_UPTIME,
+    draw.text((uptime_x + 20, y_offset), _translate(TEXT_STRINGS["UPTIME"]),
               fill=hex_to_rgb(COLORS["text_secondary"]), font=font_normal)
 
     uptime_value_x = uptime_x + 95
@@ -131,11 +139,11 @@ def draw_header(draw, server_info, width, y_offset):
     y_offset += LINE_HEIGHT
     return y_offset
 
-def draw_users(draw, img, online_users, config, y_offset):
+def draw_users(draw, img, online_users, config, y_offset, _translate):
     font_normal = get_font(FONT_SIZES["normal"])
     font_small = get_font(FONT_SIZES["small"])
 
-    draw.text((PADDING_LEFT, y_offset), TEXT_USERS_HEADER,
+    draw.text((PADDING_LEFT, y_offset), _translate(TEXT_STRINGS["USERS_HEADER"]),
               fill=hex_to_rgb(COLORS["text_secondary"]), font=font_normal)
     y_offset += LINE_HEIGHT
 
@@ -151,19 +159,22 @@ def draw_users(draw, img, online_users, config, y_offset):
                   fill=hex_to_rgb(COLORS["text_primary"]), font=font_normal)
 
         idle_x = username_x + 180
-        idle_text = f"({user.idle_time_formatted} {TEXT_AGO_SUFFIX})"
+        idle_text = f"({user.idle_time_formatted} {_translate(TEXT_STRINGS['AGO_SUFFIX'])})"
         idle_color = get_activity_color(user.idle_time, config)
         draw.text((idle_x, y_offset), idle_text, fill=hex_to_rgb(idle_color), font=font_small)
         y_offset += LINE_HEIGHT
 
     return y_offset
 
-def draw_footer(draw, config, width, y_offset):
+def draw_footer(draw, config, width, y_offset, _translate):
     font_normal = get_font(FONT_SIZES["normal"])
     timestamp = datetime.now(tz=ZoneInfo(config.timezone)).strftime('%H:%M:%S')
-    draw.text((PADDING_LEFT, y_offset), f"{TEXT_LAST_UPDATED} {timestamp}", fill=hex_to_rgb(COLORS["text_secondary"]), font=font_normal)
+    draw.text((PADDING_LEFT, y_offset), f"{_translate(TEXT_STRINGS['LAST_UPDATED'])} {timestamp}", fill=hex_to_rgb(COLORS["text_secondary"]), font=font_normal)
 
 def generate_status_image(server_info: ServerInfo, config: Config, width=450) -> io.BytesIO:
+    # Get the correct translator based on config.language (from ENV variable)
+    _translate = get_gettext(config)
+    
     base_height = HEIGHT_BASE
     if not server_info.has_error and server_info.online_users_count > 0:
         user_count = server_info.online_users_count
@@ -178,14 +189,14 @@ def generate_status_image(server_info: ServerInfo, config: Config, width=450) ->
     y_offset = PADDING_TOP
 
     if server_info.has_error:
-        y_offset = draw_error(draw, server_info.errormsg, width, y_offset)
+        y_offset = draw_error(draw, server_info.errormsg, width, y_offset, _translate)
     else:
-        y_offset = draw_header(draw, server_info, width, y_offset)
+        y_offset = draw_header(draw, server_info, width, y_offset, _translate)
         if server_info.online_users:
-            y_offset = draw_users(draw, img, server_info.online_users, config, y_offset)
+            y_offset = draw_users(draw, img, server_info.online_users, config, y_offset, _translate)
         y_offset += 10
 
-    draw_footer(draw, config, width, y_offset)
+    draw_footer(draw, config, width, y_offset, _translate)
 
     img = add_rounded_corners(img, radius=RADIUS)
 
