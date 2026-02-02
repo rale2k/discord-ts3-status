@@ -22,6 +22,7 @@ services:
       # - UPDATE_INTERVAL=30
       # - MAX_ACTIVE_SECONDS=30
       # - MAX_AWAY_SECONDS=300
+      # - LANGUAGE=en
     
     logging:
       driver: "json-file"
