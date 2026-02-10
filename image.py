@@ -5,6 +5,7 @@ import io
 
 from config import Config
 from domain import ServerInfo
+from i18n import get_translator
 
 COLORS = {
     "card_bg": "#1e1f22",
@@ -24,64 +25,54 @@ ICON_PATH_INPUT_MUTED = 'resources/input_muted.png'
 ICON_PATH_OUTPUT_MUTED = 'resources/output_muted.png'
 ICON_PATH_DEFAULT = 'resources/user.png'
 
-TEXT_ERROR_TITLE = "TeamSpeak Server Unavailable"
-TEXT_ERROR_PREFIX = "Error: "
-TEXT_USERS_ONLINE = "Users Online:"
-TEXT_UPTIME = "Uptime:"
-TEXT_USERS_HEADER = "Users (last active):"
-TEXT_NO_USERS = "No users online"
-TEXT_AGO_SUFFIX = "ago"
-TEXT_LAST_UPDATED = "Last updated at"
+HEIGHT_BASE = 135
+LINE_HEIGHT = 25
+RADIUS = 12
+ICON_SIZE = (16, 16)
+PADDING_LEFT = 20
+PADDING_TOP = 15
+FONT_SIZES = {
+    "title": 18,
+    "normal": 14,
+    "small": 13
+}
 
+ICON_CACHE = {
+    "talking": Image.open(ICON_PATH_TALKING).resize(ICON_SIZE, Image.LANCZOS),
+    "input_muted": Image.open(ICON_PATH_INPUT_MUTED).resize(ICON_SIZE, Image.LANCZOS),
+    "output_muted": Image.open(ICON_PATH_OUTPUT_MUTED).resize(ICON_SIZE, Image.LANCZOS),
+    "default": Image.open(ICON_PATH_DEFAULT).resize(ICON_SIZE, Image.LANCZOS),
+}
 
 def hex_to_rgb(hex_color) -> tuple[int, int, int]:
     hex_color = hex_color.lstrip('#')
     return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
 
-
 def get_font(size) -> ImageFont.FreeTypeFont:
     return ImageFont.truetype(FONT_PATH, size)
 
+def draw_rounded_rectangle(draw: ImageDraw.ImageDraw, xy, radius, fill, outline=None, width=1):
+    draw.rounded_rectangle(xy, radius=radius, fill=fill, outline=outline, width=width)
 
-def draw_rounded_rectangle(draw, xy, radius, fill, outline=None, width=1):
-    x1, y1, x2, y2 = xy
-    draw.rectangle([x1 + radius, y1, x2 - radius, y2],
-                   fill=fill, outline=outline, width=width)
-    draw.rectangle([x1, y1 + radius, x2, y2 - radius],
-                   fill=fill, outline=outline, width=width)
-
-
-def add_rounded_corners(img, radius) -> Image.Image:
+def add_rounded_corners(img: Image.Image, radius) -> Image.Image:
     mask = Image.new('L', img.size, 0)
     draw = ImageDraw.Draw(mask)
-
-    draw.rounded_rectangle(
-        [(0, 0), img.size],
-        radius=radius,
-        fill=255
-    )
-
+    draw.rounded_rectangle([(0, 0), img.size], radius=radius, fill=255)
     img.putalpha(mask)
     return img
 
-
 def get_status_icon(client_flag_talking, client_input_muted, client_output_muted) -> Image.Image:
     if client_flag_talking:
-        ts_logo = Image.open(ICON_PATH_TALKING)
+        return ICON_CACHE["talking"]
     elif client_input_muted:
-        ts_logo = Image.open(ICON_PATH_INPUT_MUTED)
+        return ICON_CACHE["input_muted"]
     elif client_output_muted:
-        ts_logo = Image.open(ICON_PATH_OUTPUT_MUTED)
+        return ICON_CACHE["output_muted"]
     else:
-        ts_logo = Image.open(ICON_PATH_DEFAULT)
-
-    ts_logo = ts_logo.resize((16, 16))
-    return ts_logo
-
+        return ICON_CACHE["default"]
 
 def get_activity_color(idle_time_ms: int, config: Config) -> str:
     idle_seconds = idle_time_ms // 1000
-    
     if idle_seconds < config.max_active_seconds:
         return COLORS["text_secondary"]
     elif idle_seconds < config.max_away_seconds:
@@ -89,86 +80,103 @@ def get_activity_color(idle_time_ms: int, config: Config) -> str:
     else:
         return COLORS["red"]
 
+def draw_error(draw, errormsg, width, y_offset, _translate):
+    font_title = get_font(FONT_SIZES["title"])
+    font_normal = get_font(FONT_SIZES["normal"])
+    draw.text((PADDING_LEFT, y_offset), _translate["server_unavailable"],
+              fill=hex_to_rgb(COLORS["red"]), font=font_title)
+    y_offset += 35
+    draw.text((PADDING_LEFT, y_offset), f"{_translate['error_prefix']}{errormsg}",
+              fill=hex_to_rgb(COLORS["text_secondary"]), font=font_normal)
+    y_offset += 35
+    return y_offset
+
+def draw_header(draw, server_info, width, y_offset, _translate):
+    font_title = get_font(FONT_SIZES["title"])
+    font_normal = get_font(FONT_SIZES["normal"])
+
+    draw.text((PADDING_LEFT, y_offset), server_info.name,
+              fill=hex_to_rgb(COLORS["text_primary"]), font=font_title)
+
+    y_offset += 35
+
+    draw.text((PADDING_LEFT, y_offset), _translate["users_online"],
+              fill=hex_to_rgb(COLORS["text_secondary"]), font=font_normal)
+
+    users_count = f"{server_info.online_users_count}/{server_info.max_clients}"
+    draw.text((150, y_offset), users_count,
+              fill=hex_to_rgb(COLORS["text_primary"]), font=font_normal)
+
+    uptime_x = width // 2 + 20
+    draw.text((uptime_x + 20, y_offset), _translate["uptime"],
+              fill=hex_to_rgb(COLORS["text_secondary"]), font=font_normal)
+
+    uptime_value_x = uptime_x + 95
+    draw.text((uptime_value_x, y_offset), server_info.uptime_formatted,
+              fill=hex_to_rgb(COLORS["text_primary"]), font=font_normal)
+
+    y_offset += LINE_HEIGHT
+    return y_offset
+
+def draw_users(draw, img, online_users, config, y_offset, _translate):
+    font_normal = get_font(FONT_SIZES["normal"])
+    font_small = get_font(FONT_SIZES["small"])
+
+    draw.text((PADDING_LEFT, y_offset), _translate["users_header"],
+              fill=hex_to_rgb(COLORS["text_secondary"]), font=font_normal)
+    y_offset += LINE_HEIGHT
+
+    for user in online_users:
+        status_icon = get_status_icon(
+            user.flag_talking, user.input_muted, user.output_muted)
+
+        img.paste(status_icon, (PADDING_LEFT, y_offset),
+                  status_icon if status_icon.mode == 'RGBA' else None)
+
+        username_x = PADDING_LEFT + 20
+        draw.text((username_x, y_offset), user.nickname,
+                  fill=hex_to_rgb(COLORS["text_primary"]), font=font_normal)
+
+        idle_x = username_x + 180
+        idle_text = f"({user.idle_time_formatted} {_translate['ago']})"
+        idle_color = get_activity_color(user.idle_time, config)
+        draw.text((idle_x, y_offset), idle_text, fill=hex_to_rgb(idle_color), font=font_small)
+        y_offset += LINE_HEIGHT
+
+    return y_offset
+
+def draw_footer(draw, config, width, y_offset, _translate):
+    font_normal = get_font(FONT_SIZES["normal"])
+    timestamp = datetime.now(tz=ZoneInfo(config.timezone)).strftime('%H:%M:%S')
+    draw.text((PADDING_LEFT, y_offset), f"{_translate['last_updated']} {timestamp}", fill=hex_to_rgb(COLORS["text_secondary"]), font=font_normal)
 
 def generate_status_image(server_info: ServerInfo, config: Config, width=450) -> io.BytesIO:
-    font_title = get_font(18)
-    font_normal = get_font(14)
-    font_small = get_font(13)
-    base_height = 135
+    _translate = get_translator(config)
+    
+    base_height = HEIGHT_BASE
     if not server_info.has_error and server_info.online_users_count > 0:
         user_count = server_info.online_users_count
-        user_list_height = max(user_count * 25, 30)
+        user_list_height = max(user_count * LINE_HEIGHT, 30)
         height = base_height + user_list_height
     else:
         height = 110
 
-    img = Image.new('RGBA', (width, height), hex_to_rgb(
-        COLORS["card_bg"]) + (255,))
+    img = Image.new('RGBA', (width, height), hex_to_rgb(COLORS["card_bg"]) + (255,))
     draw = ImageDraw.Draw(img)
 
-    y_offset = 15
+    y_offset = PADDING_TOP
 
     if server_info.has_error:
-        draw.text((20, y_offset), TEXT_ERROR_TITLE,
-                  fill=hex_to_rgb(COLORS["red"]), font=font_title)
-        y_offset += 35
-
-        draw.text((20, y_offset), f"{TEXT_ERROR_PREFIX}{server_info.errormsg}",
-                  fill=hex_to_rgb(COLORS["text_secondary"]), font=font_normal)
-
-        y_offset += 35
+        y_offset = draw_error(draw, server_info.errormsg, width, y_offset, _translate)
     else:
-        draw.text((20, y_offset), f"{server_info.name}",
-                  fill=hex_to_rgb(COLORS["text_primary"]), font=font_title)
-
-        y_offset += 35
-
-        draw.text((20, y_offset), TEXT_USERS_ONLINE,
-                  fill=hex_to_rgb(COLORS["text_secondary"]), font=font_normal)
-
-        users_count = f"{server_info.online_users_count}/{server_info.max_clients}"
-        draw.text((150, y_offset), users_count, fill=hex_to_rgb(
-            COLORS["text_primary"]), font=font_normal)
-
-        uptime_x = width // 2 + 20
-        draw.text((uptime_x + 20, y_offset), TEXT_UPTIME,
-                  fill=hex_to_rgb(COLORS["text_secondary"]), font=font_normal)
-
-        uptime_value_x = uptime_x + 95
-        draw.text((uptime_value_x, y_offset), f"{server_info.uptime_formatted}",
-                  fill=hex_to_rgb(COLORS["text_primary"]), font=font_normal)
-
+        y_offset = draw_header(draw, server_info, width, y_offset, _translate)
         if server_info.online_users:
-            y_offset += 25
-            draw.text((20, y_offset), TEXT_USERS_HEADER,
-                      fill=hex_to_rgb(COLORS["text_secondary"]), font=font_normal)
-            y_offset += 25
+            y_offset = draw_users(draw, img, server_info.online_users, config, y_offset, _translate)
+        y_offset += 10
 
-            for user in server_info.online_users:
-                status_icon = get_status_icon(
-                    user.flag_talking, user.input_muted, user.output_muted)
+    draw_footer(draw, config, width, y_offset, _translate)
 
-                circle_x = 0
-                img.paste(status_icon, (circle_x + 20, y_offset),
-                          status_icon if status_icon.mode == 'RGBA' else None)
-
-                username_x = 40
-                draw.text((username_x, y_offset), user.nickname,
-                          fill=hex_to_rgb(COLORS["text_primary"]), font=font_normal)
-
-                idle_x = username_x + 180
-                idle_text = f"({user.idle_time_formatted} {TEXT_AGO_SUFFIX})"
-                idle_color = get_activity_color(user.idle_time, config)
-                draw.text((idle_x, y_offset), idle_text,
-                          fill=hex_to_rgb(idle_color), font=font_small)
-                y_offset += 25
-        else:
-            y_offset += 25
-
-        draw.text((20, y_offset), f"{TEXT_LAST_UPDATED} {datetime.now(tz=ZoneInfo(config.timezone)).strftime('%H:%M:%S')}",
-                  fill=hex_to_rgb(COLORS["text_secondary"]), font=font_normal)
-
-    img = add_rounded_corners(img, radius=12)
+    img = add_rounded_corners(img, radius=RADIUS)
 
     buffer = io.BytesIO()
     img.save(buffer, 'PNG', optimize=True)
