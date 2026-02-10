@@ -1,0 +1,10 @@
+{
+    "server_unavailable": "TeamSpeak Server Unavailable",
+    "error_prefix": "Error: ",
+    "users_online": "Users Online:",
+    "uptime": "Uptime:",
+    "users_header": "Users (last active):",
+    "no_users": "No users online",
+    "ago": "ago",
+    "last_updated": "Last updated at"
+}

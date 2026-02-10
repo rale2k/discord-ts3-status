@@ -1,0 +1,10 @@
+{
+    "server_unavailable": "Server TeamSpeak není dostupný",
+    "error_prefix": "Chyba: ",
+    "users_online": "Uživatelé online:",
+    "uptime": "Dostupnost",
+    "users_header": "Uživatelé (poslední aktivita):",
+    "no_users": "Žádní uživatelé online",
+    "ago": "zpět",
+    "last_updated": "Naposledy aktualizováno v"
+}
