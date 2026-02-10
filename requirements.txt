@@ -7,7 +7,6 @@ blinker==1.4
 certifi==2025.8.3
 cffi==2.0.0
 charset-normalizer==3.4.3
-cloudinary==1.44.1
 cryptography==46.0.1
 discord.py==2.6.4
 frozenlist==1.7.0

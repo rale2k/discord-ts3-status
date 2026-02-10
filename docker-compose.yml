@@ -4,7 +4,7 @@ services:
   ts3-discord-status:
     build: .
     container_name: ts3-discord-status
-    image: rale2k/discord-ts3-status:latest
+    image: rale2k/ts3-status:latest
     restart: unless-stopped
     environment:
       # Required
@@ -22,6 +22,7 @@ services:
       # - UPDATE_INTERVAL=30
       # - MAX_ACTIVE_SECONDS=30
       # - MAX_AWAY_SECONDS=300
+      # - LANGUAGE=en
     
     logging:
       driver: "json-file"
