@@ -1,8 +1,10 @@
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from config import Config
 from domain import ServerInfo, Client
 from image import generate_status_image
-from datetime import datetime
-
 
 def save_test_image(server_info: ServerInfo, filename: str):
     result = generate_status_image(server_info, config=Config.from_env(), width=450)
@@ -23,7 +25,7 @@ def save_test_image(server_info: ServerInfo, filename: str):
         with open(f"docs/{filename}", "wb") as f:
             f.write(buffer.getvalue())
     
-    print(f"✓ Generated: {filename}")
+    print(f"[OK] Generated: {filename}")
 
 
 def test_error_state():
@@ -362,7 +364,7 @@ def main():
         try:
             test_func()
         except Exception as e:
-            print(f"✗ Failed: {test_name} - {e}")
+            print(f"[FAIL] Failed: {test_name} - {e}")
     
     print()
     print("=" * 60)
